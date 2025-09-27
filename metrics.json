@@ -1,0 +1,8 @@
+{
+  "users": 2730,
+  "drops": 3,
+  "seeds": 20,
+  "ctr_random_mean": 0.137957,
+  "ctr_thompson_mean": 0.137446,
+  "uplift_ctr_percent": -0.37
+}
