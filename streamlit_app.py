@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import json, os
+import os
 from bandits import compare_policies
 
 st.title("Snappx — TRL-3 / Run 1 (Streamlit)")
@@ -33,16 +32,15 @@ if "random" in g.index and "thompson" in g.index:
     st.metric("Uplift Thompson vs Random", f"{uplift:.2f}%")
 
 # ==============================
-# SEZIONE 2 — OUTPUT RUN SALVATO
+# SEZIONE 2 — RUN SALVATO
 # ==============================
-st.header("📂 Run salvato (da CSV)")
+st.header("📂 Run salvato (da CSV + grafici)")
 
 csv_path = "outputs/streamlit_trl_3_r1/run.csv"
 
 if os.path.exists(csv_path):
     df_saved = pd.read_csv(csv_path)
 
-    # Forza numerici se servono
     for c in ["views","tokens","redemptions","CTR"]:
         if c in df_saved.columns:
             df_saved[c] = pd.to_numeric(df_saved[c], errors="coerce")
@@ -56,5 +54,17 @@ if os.path.exists(csv_path):
         "run1_3000u_20s.csv",
         "text/csv"
     )
+
+    # Mostra i grafici salvati
+    plot_lc = os.path.join("outputs/streamlit_trl_3_r1", "plots_learning_curve.png")
+    plot_or = os.path.join("outputs/streamlit_trl_3_r1", "plots_overall_rate.png")
+
+    if os.path.exists(plot_lc):
+        st.image(plot_lc, caption="Learning Curve", use_container_width=True)
+
+    if os.path.exists(plot_or):
+        st.image(plot_or, caption="Overall CTR", use_container_width=True)
+
 else:
     st.warning("Nessun file run.csv trovato in outputs/streamlit_trl_3_r1/")
+
