@@ -6,6 +6,9 @@ from bandits import compare_policies
 
 st.title("Snappx — TRL-3 / Run 1 (Streamlit)")
 
+# ==============================
+# SEZIONE 1 — SIMULAZIONE LIVE
+# ==============================
 with st.sidebar:
     st.header("Parametri simulazione")
     users = st.slider("Utenti simulati", 100, 10000, 3000, 100)
@@ -15,48 +18,43 @@ with st.sidebar:
     seed0 = st.number_input("Seed di partenza", 0, 100000, 0, 1)
 
 rows = []
-for s in range(seed0, seed0+seeds):
+for s in range(seed0, seed0 + seeds):
     out = compare_policies(users=users, horizon_s=horizon, drops_k=drops, seed=s)
     for pol, m in out.items():
         rows.append({"seed": s, "policy": pol, **m})
 df = pd.DataFrame(rows)
 
-st.subheader("Per-seed results")
+st.subheader("Per-seed results (Simulazione live)")
 st.dataframe(df, use_container_width=True)
 
 g = df.groupby("policy").mean(numeric_only=True)
-uplift = (g.loc["thompson","CTR"]/g.loc["random","CTR"] - 1.0)*100.0 if g.loc["random","CTR"]>0 else float("nan")
+if "random" in g.index and "thompson" in g.index:
+    uplift = (g.loc["thompson","CTR"]/g.loc["random","CTR"] - 1.0)*100.0 if g.loc["random","CTR"] > 0 else float("nan")
+    st.metric("Uplift Thompson vs Random", f"{uplift:.2f}%")
 
-st.subheader("Sintesi")
-st.write(
-    f"**CTR medio** — Random: `{g.loc['random','CTR']:.4f}` · Thompson: `{g.loc['thompson','CTR']:.4f}`  \n"
-    f"**Uplift CTR (Thompson vs Random):** `{uplift:.2f}%`"
-)
+# ==============================
+# SEZIONE 2 — OUTPUT RUN SALVATO
+# ==============================
+st.header("📂 Run salvato (da CSV)")
 
-fig1 = plt.figure()
-df.pivot(index="seed", columns="policy", values="CTR").sort_index().plot(marker='o')
-plt.title("Learning curve (CTR per seed)")
-plt.xlabel("seed"); plt.ylabel("CTR"); plt.tight_layout()
-st.pyplot(fig1)
+csv_path = "outputs/streamlit_trl_3_r1/run.csv"
 
-fig2 = plt.figure()
-g["CTR"].plot(kind="bar")
-plt.title("CTR medio — Random vs Thompson")
-plt.ylabel("CTR"); plt.xticks(rotation=0); plt.tight_layout()
-st.pyplot(fig2)
+if os.path.exists(csv_path):
+    df_saved = pd.read_csv(csv_path)
 
-st.markdown("---")
-st.subheader("Run-1: output salvati (se presenti nel repo)")
+    # Forza numerici se servono
+    for c in ["views","tokens","redemptions","CTR"]:
+        if c in df_saved.columns:
+            df_saved[c] = pd.to_numeric(df_saved[c], errors="coerce")
 
-if os.path.exists("metrics.json"):
-    with open("metrics.json") as f: st.json(json.load(f))
+    st.subheader("Per-seed results (da file salvato)")
+    st.dataframe(df_saved.head(20), use_container_width=True)
 
-cols = st.columns(2)
-if os.path.exists("plots_learning_curve.png"):
-    cols[0].image("plots_learning_curve.png", caption="Learning curve (salvata)")
-if os.path.exists("plots_overall_rate.png"):
-    cols[1].image("plots_overall_rate.png", caption="CTR medio (salvato)")
-
-if os.path.exists("run1_3000u_20s.csv"):
-    df_saved = pd.read_csv("run1_3000u_20s.csv")
-    st.download_button("Scarica CSV run salvato", df_saved.to_csv(index=False), "run1_3000u_20s.csv", "text/csv")
+    st.download_button(
+        "Scarica CSV run salvato",
+        df_saved.to_csv(index=False),
+        "run1_3000u_20s.csv",
+        "text/csv"
+    )
+else:
+    st.warning("Nessun file run.csv trovato in outputs/streamlit_trl_3_r1/")
